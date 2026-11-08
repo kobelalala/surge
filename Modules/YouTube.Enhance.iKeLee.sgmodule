@@ -1,0 +1,23 @@
+#!name=YouTube Enhance (iKeLee, Local)
+#!desc=iKeLee YouTube 去广告（本地解密版）：去广告、画中画、字幕翻译、YouTube Music、后台播放；UMP 解密在手机本地完成，不经过第三方 Worker。注意：一次只能启用一个 YouTube 模块，启用本模块前请先停用 YouTube Enhance (Local)。
+#!arguments=block_upload:false,block_shorts:false,block_immersive:false,caption_lang:zh-Hans,debug:false
+#!arguments-desc=block_upload: 隐藏底栏上传按钮；block_shorts: 隐藏底栏 Shorts 按钮；block_immersive: 隐藏 YouTube Music 选段按钮；caption_lang: 字幕翻译目标语言（off 为关闭）；debug: 调试日志。
+#!requirement=SYSTEM = 'iOS'
+
+[Rule]
+AND,((DOMAIN-SUFFIX,googlevideo.com),(PROTOCOL,QUIC)),REJECT
+AND,((DOMAIN-SUFFIX,youtubei.googleapis.com),(PROTOCOL,QUIC)),REJECT
+
+[Script]
+youtube.ikelee.ad-break = type=http-request,pattern=^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/player\/ad_break(?:\?.*)?$,script-path=https://raw.githubusercontent.com/kobelalala/surge/main/Scripts/YouTube-iKeLee/request.js
+youtube.ikelee.response = type=http-response,pattern=^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch|log_event|config)(?:\?.*)?$,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/kobelalala/surge/main/Scripts/YouTube-iKeLee/response.js,argument="{"blockUpload":{{{block_upload}}},"blockShorts":{{{block_shorts}}},"blockImmersive":{{{block_immersive}}},"captionLang":"{{{caption_lang}}}","debug":{{{debug}}}}"
+youtube.ikelee.ump = type=http-response,pattern=^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback(?:\?.*)?$,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/kobelalala/surge/main/Scripts/YouTube-iKeLee/ump-decrypt.js
+youtube.ikelee.init = type=http-request,pattern=^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback(?:\?.*)?$,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/kobelalala/surge/main/Scripts/YouTube-iKeLee/request.js
+youtube.ikelee.log-event = type=http-request,pattern=^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/log_event,requires-body=1,max-size=-1,binary-body-mode=1,script-path=https://raw.githubusercontent.com/kobelalala/surge/main/Scripts/YouTube-iKeLee/request.js
+
+[URL Rewrite]
+^https:\/\/www\.youtube\.com\/(pagead|pcs)\/ - reject
+^https:\/\/s\.youtube\.com\/api\/stats\/ads - reject
+
+[MITM]
+hostname = %APPEND% *.googlevideo.com, youtubei.googleapis.com, *.youtube.com
